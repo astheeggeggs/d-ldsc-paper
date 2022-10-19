@@ -15,7 +15,8 @@ export PATH="/psych/genetics_data/dpalmer/anaconda2/bin:$PATH"
 export PATH="/home/unix/dpalmer/google-cloud-sdk/bin/:$PATH"
 
 # conda env create --file environment.yml
-source activate ldsc
+conda env create --file finemapping_inputs_environment.yml
+source activate finemap_inputs
 use R-3.5
 
 # Removed sex as an option as we're just initially focusing on the both_sexes GWASes.

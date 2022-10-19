@@ -1,0 +1,11 @@
+name: finemap_inputs
+channels:
+- conda-forge
+- bioconda
+- defaults
+dependencies:
+- python=2.7
+- numpy
+- scipy
+- pandas
+- pybedtools
