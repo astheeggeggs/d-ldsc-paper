@@ -28,7 +28,7 @@ phenotypes <- intersect(
 	unlist(phenotype_filter %>% filter(dominance_qc_no_ordinal) %>% select(phenotype)),
 	phenotypes
 	)
-phenotypes <- phenotypes[1]
+
 for(i in 1:length(phenotypes)) {
 	# Check to see if this phenotype is in this full phenotype file.
 	file_phenotypes <- strsplit(system(paste("zcat", biomarkers_cluster, "| head -1"), intern=TRUE)[[1]], split='\t')[[1]]
@@ -42,16 +42,17 @@ for(i in 1:length(phenotypes)) {
 		cat("Submitting phenotype:", phenotypes[i], "\n")
 		system(paste0('qsub -v ',
 			'pheno=', phenotypes[i], ',',
-			'full_phenotype_file=', full_phenotype_files_cluster[j], ',',
-			'incl_file=', incl_folders[j], '/', phenotypes[i], '.incl,',
+			'full_phenotype_file=', biomarkers_cluster, ',',
+			'incl_file=', incl_folders, '/', phenotypes[i], '.incl,',
 			'dom_file=', dom_file, ',',
 			'add_file=', add_file, ',',
-			'out=', out_folders[j], ',',
+			'out=', out_folders, ',',
 			'maf_locus=', maf_locus, ',',
 			'maf_finemap=', maf_finemap, ',',
 			'p_hwe_finemap=', p_hwe_finemap,
 			' /home/unix/dpalmer/Repositories/ldscgxe_dominance_paper/biomarker_finemapping_rerun/finemapping_template_hail_input.sh')
 		)
+		break
 
 		# Note that each of these variables: pheno, full_phenotype_file, incl_file, dom_file, add_file, and out are passed to 
 		# finemapping_template_hail_input.sh and can be called using ${pheno} etc. 
