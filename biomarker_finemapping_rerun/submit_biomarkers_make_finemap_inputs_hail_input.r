@@ -28,7 +28,7 @@ phenotypes <- intersect(
 	unlist(phenotype_filter %>% filter(dominance_qc_no_ordinal) %>% select(phenotype)),
 	phenotypes
 	)
-
+phenotypes <- phenotypes[1]
 for(i in 1:length(phenotypes)) {
 	# Check to see if this phenotype is in this full phenotype file.
 	file_phenotypes <- strsplit(system(paste("zcat", biomarkers_cluster, "| head -1"), intern=TRUE)[[1]], split='\t')[[1]]
