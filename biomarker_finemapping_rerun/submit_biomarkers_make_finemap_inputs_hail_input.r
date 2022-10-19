@@ -18,7 +18,7 @@ out_folders <- "/psych/genetics_data/dpalmer/UKbb/dominance_fine_mapping_biomark
 awk_script <- "~/Repositories/ldscgxe/dominance_fine_mapping/incl_file_preparation.awk"
 
 # phenotype_dt <- fread("gsutil cat gs://ukbb-dominance/phenotypes_with_significant_dominance_hit_no_cts_raw.tsv.bgz | zcat")
-phenotype_dt <- fread(cmd = "gs://ukbb-dominance/phenotypes_with_significant_dominance_hit_no_cts_raw_0.01_pHWE_1e-10.tsv.bgz | zcat")
+phenotype_dt <- fread(cmd = "gsutil cat gs://ukbb-dominance/phenotypes_with_significant_dominance_hit_no_cts_raw_0.05_pHWE_1e-6.tsv.bgz | zcat")
 phenotypes <- phenotype_dt$phenotype
 # Filter this list down to the 1,060 phenotypes in the curated list
 # This file was created using generate_raymonds_primary_both_sex_phenotypes.r
