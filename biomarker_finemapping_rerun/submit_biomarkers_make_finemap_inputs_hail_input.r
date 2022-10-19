@@ -50,7 +50,7 @@ for(i in 1:length(phenotypes)) {
 			'maf_locus=', maf_locus, ',',
 			'maf_finemap=', maf_finemap, ',',
 			'p_hwe_finemap=', p_hwe_finemap,
-			' /home/unix/dpalmer/Repositories/ldscgxe_paper/biomarker_finemapping_rerun/finemapping_template_hail_input.sh')
+			' /home/unix/dpalmer/Repositories/ldscgxe_dominance_paper/biomarker_finemapping_rerun/finemapping_template_hail_input.sh')
 		)
 
 		# Note that each of these variables: pheno, full_phenotype_file, incl_file, dom_file, add_file, and out are passed to 
