@@ -35,7 +35,7 @@ for(i in 1:length(phenotypes)) {
 	
 	# Different behavior for the biomarkers (stored in a subfolder).
 	file_phenotypes <- paste0(file_phenotypes, "_irnt")
-	dom_file <- paste0("/psych/genetics_data/dpalmer/UKbb/sumstats-dominance-export/biomarkers_rerun/both_sexes/", phenotypes[i], ".gwas.imputed_v3.both_sexes.tsv.bgz")
+	dom_file <- paste0("/psych/genetics_data/dpalmer/UKbb/sumstats-dominance-export/biomarkers_rerun/both_sexes/", phenotypes[i], ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz")
 	add_file <- paste0("/stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/both_sexes/biomarkers/", phenotypes[i], ".gwas.imputed_v3.both_sexes.tsv.bgz")
 
 	if(phenotypes[i] %in% file_phenotypes) {
