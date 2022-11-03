@@ -52,7 +52,6 @@ for(i in 1:length(phenotypes)) {
 			'p_hwe_finemap=', p_hwe_finemap,
 			' /home/unix/dpalmer/Repositories/ldscgxe_dominance_paper/biomarker_finemapping_rerun/finemapping_template_hail_input.sh')
 		)
-		break
 
 		# Note that each of these variables: pheno, full_phenotype_file, incl_file, dom_file, add_file, and out are passed to 
 		# finemapping_template_hail_input.sh and can be called using ${pheno} etc. 
