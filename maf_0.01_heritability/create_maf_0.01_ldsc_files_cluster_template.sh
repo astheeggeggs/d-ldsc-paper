@@ -16,6 +16,7 @@ source /broad/software/scripts/useuse
 # reuse -q .zlib-1.2.8
 # reuse -q PSEQ
 use R-3.5
+export PATH="/home/unix/dpalmer/google-cloud-sdk/bin/:$PATH"
 
 echo "batch = ${batch}"
 Rscript --vanilla  create_maf_0.01_ldsc_files_cluster.r ${batch}
