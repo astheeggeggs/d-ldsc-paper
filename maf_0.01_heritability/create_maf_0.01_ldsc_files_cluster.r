@@ -96,8 +96,8 @@ for (pheno in phenos) {
 		break
 	}
 
-	if (biomarker) {
-		print("aha, a biomarker!")
+	if (not_biomarker) {
+		print("aha, not a biomarker!")
 		dt_gwas_add <- fread(
 			cmd = paste0("zcat ", gwas_add_filepath),
 			select = c('variant', 'n_complete_samples', 'tstat'),
@@ -114,6 +114,14 @@ for (pheno in phenos) {
 		dt_out <- dt_out %>% select(SNP, A1, A2, Z_A, Z_D, N)
 		fwrite(dt_out, paste0(outfolder, pheno, ".imputed_v3.ldsc_add_dom_no_hm3_filter.both_sexes.tsv.gz"), sep='\t')
 	} else {
-		print("Not a biomarker!")
+		print("A biomarker!")
 	}
 }
+
+# Determine which phenotypes are missing, if any.
+# List the files in the outfolder
+ldsc_phenotypes <- gsub("\\.imputed.*", "", dir(outfolder))
+dt_phenos <- fread("~/Repositories/ldscgxe_dominance_paper/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.phenotypes_and_boolean_filters.tsv")
+phenos <- unlist(dt_phenos %>% filter(dominance_qc_no_ordinal) %>% select(phenotype))
+
+setdiff(phenos, ldsc_phenotypes)
