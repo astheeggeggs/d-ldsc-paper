@@ -4,7 +4,7 @@ library(data.table)
 library(dplyr)
 
 args = commandArgs(trailingOnly=TRUE)
-batch <- args[1]
+batch <- as.integer(args[1])
 batch_size = 20
 
 # # Read in the set of passing phenotypes
@@ -13,39 +13,39 @@ phenos <- unlist(dt_phenos %>% filter(dominance_qc_no_ordinal) %>% select(phenot
 phenos <- phenos[((batch-1)*batch_size + 1):(batch*batch_size)]
 outfolder <- "/psych/genetics_data/dpalmer/UKbb/ldsc-dominance-export/"
 
-# Then read in the additive sumstats file to grab the N
-# /stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/{both_sexes}/{biomarkers}
-add_stem <- "/stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/both_sexes/"
-add_no_biomarker <- file.exists(paste0(add_stem, phenos, ".gwas.imputed_v3.both_sexes.tsv.bgz"))
-# Biomarkers are separate
-biomarker <- file.exists(paste0(add_stem, "biomarkers/", phenos, ".gwas.imputed_v3.both_sexes.tsv.bgz"))
-all(no_biomarker | biomarker)
-# Good, all are present
+# # Then read in the additive sumstats file to grab the N
+# # /stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/{both_sexes}/{biomarkers}
+# add_stem <- "/stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/both_sexes/"
+# add_no_biomarker <- file.exists(paste0(add_stem, phenos, ".gwas.imputed_v3.both_sexes.tsv.bgz"))
+# # Biomarkers are separate
+# biomarker <- file.exists(paste0(add_stem, "biomarkers/", phenos, ".gwas.imputed_v3.both_sexes.tsv.bgz"))
+# all(no_biomarker | biomarker)
+# # Good, all are present
 
-# Then read in the dominance sumstats file to grab everything else
-# Biomarkers are here:
-# /psych/genetics_data/dpalmer/UKbb/sumstats-dominance-export/biomarkers_rerun/both_sexes/
-# Everything else is here:
-# /stanley/genetics_storage/analysis/ukbb_dominance/sumstats-dominance-export/both_sexes/
-# No it's not! There must have been an error in copying across the dominance sumstats - not all of them are there!
-# Luckily we have the cloud versions.
-# gs://ukb-mega-gwas-results/round2/dominance-tsvs/*tsv.bgz
+# # Then read in the dominance sumstats file to grab everything else
+# # Biomarkers are here:
+# # /psych/genetics_data/dpalmer/UKbb/sumstats-dominance-export/biomarkers_rerun/both_sexes/
+# # Everything else is here:
+# # /stanley/genetics_storage/analysis/ukbb_dominance/sumstats-dominance-export/both_sexes/
+# # No it's not! There must have been an error in copying across the dominance sumstats - not all of them are there!
+# # Luckily we have the cloud versions.
+# # gs://ukb-mega-gwas-results/round2/dominance-tsvs/*tsv.bgz
 
-dom_tsv_cloud <- system(
-	"gsutil ls gs://ukb-mega-gwas-results/round2/dominance-tsvs/*both_sexes*tsv.bgz",
-	intern=TRUE
-	)
-dom_stem <- "gs://ukb-mega-gwas-results/round2/dominance-tsvs/"
-no_biomarker <- paste0(dom_stem, phenos, ".dominance.gwas.imputed_v3.both_sexes.tsv.bgz") %in% dom_tsv_cloud
-dom_biomarker_stem <- "gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs/"
-dom_biomarker_tsv_cloud <- system("gsutil ls gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs/*rerun*tsv.bgz", intern=TRUE)
-biomarker <- paste0(dom_biomarker_stem, phenos, ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz") %in% dom_biomarker_tsv_cloud
+# dom_tsv_cloud <- system(
+# 	"gsutil ls gs://ukb-mega-gwas-results/round2/dominance-tsvs/*both_sexes*tsv.bgz",
+# 	intern=TRUE
+# 	)
+# dom_stem <- "gs://ukb-mega-gwas-results/round2/dominance-tsvs/"
+# no_biomarker <- paste0(dom_stem, phenos, ".dominance.gwas.imputed_v3.both_sexes.tsv.bgz") %in% dom_tsv_cloud
+# dom_biomarker_stem <- "gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs/"
+# dom_biomarker_tsv_cloud <- system("gsutil ls gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs/*rerun*tsv.bgz", intern=TRUE)
+# biomarker <- paste0(dom_biomarker_stem, phenos, ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz") %in% dom_biomarker_tsv_cloud
 
-all(no_biomarker | biomarker)
-# Good, they're all present.
+# all(no_biomarker | biomarker)
+# # Good, they're all present.
 
-# Now, consider a test case - the first entry of phenos.
-# Construct the ldsc file - and then compress it!
+# # Now, consider a test case - the first entry of phenos.
+# # Construct the ldsc file - and then compress it!
 
 # Extract the ldsc file
 
