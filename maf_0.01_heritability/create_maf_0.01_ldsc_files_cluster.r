@@ -85,7 +85,7 @@ for (pheno in phenos) {
 	}
 
 	not_biomarker <- paste0(dom_stem, pheno, ".dominance.gwas.imputed_v3.both_sexes.tsv.bgz") %in% dom_tsv_cloud
-	biomarker <- paste0(dom_biomarker_stem, phenos, ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz") %in% dom_biomarker_tsv_cloud
+	biomarker <- paste0(dom_biomarker_stem, pheno, ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz") %in% dom_biomarker_tsv_cloud
 
 	if (not_biomarker) {
 		gwas_dom_filepath <- paste0(dom_stem, pheno, ".dominance.gwas.imputed_v3.both_sexes.tsv.bgz")
@@ -96,19 +96,21 @@ for (pheno in phenos) {
 		break
 	}
 
-	dt_gwas_add <- fread(
-		cmd = paste0("zcat ", gwas_add_filepath),
-		select = c('variant', 'n_complete_samples', 'tstat'),
-		col.names = c('varid', 'N', 'Z_A'),
-		key = 'varid'
-		)
-	dt_gwas_dom <- fread(
-		cmd = paste0("gsutil cat ", gwas_dom_filepath, " | zcat"),
-		select = c('variant', 'dominance_tstat'),
-		col.names = c('varid', 'Z_D'),
-		key = 'varid'
-		)
-	dt_out <- merge(dt_sites, merge(dt_gwas_add, dt_gwas_dom))
-	dt_out <- dt_out %>% select(SNP, A1, A2, Z_A, Z_D, N)
-	fwrite(dt_out, paste0(outfolder, pheno, ".imputed_v3.ldsc_add_dom_no_hm3_filter.both_sexes.tsv.gz"), sep='\t')
+	if (biomarker) {
+		dt_gwas_add <- fread(
+			cmd = paste0("zcat ", gwas_add_filepath),
+			select = c('variant', 'n_complete_samples', 'tstat'),
+			col.names = c('varid', 'N', 'Z_A'),
+			key = 'varid'
+			)
+		dt_gwas_dom <- fread(
+			cmd = paste0("gsutil cat ", gwas_dom_filepath, " | zcat"),
+			select = c('variant', 'dominance_tstat'),
+			col.names = c('varid', 'Z_D'),
+			key = 'varid'
+			)
+		dt_out <- merge(dt_sites, merge(dt_gwas_add, dt_gwas_dom))
+		dt_out <- dt_out %>% select(SNP, A1, A2, Z_A, Z_D, N)
+		fwrite(dt_out, paste0(outfolder, pheno, ".imputed_v3.ldsc_add_dom_no_hm3_filter.both_sexes.tsv.gz"), sep='\t')
+	}
 }
