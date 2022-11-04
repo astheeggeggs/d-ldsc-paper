@@ -90,7 +90,7 @@ for (pheno in phenos) {
 	if (not_biomarker) {
 		gwas_dom_filepath <- paste0(dom_stem, pheno, ".dominance.gwas.imputed_v3.both_sexes.tsv.bgz")
 	} else if (biomarker) {
-		gwas_dom_filepath <- paste0(dom_biomarker_stem, "biomarkers/", pheno, ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz")
+		gwas_dom_filepath <- paste0(dom_biomarker_stem, pheno, ".gwas.imputed_v3.both_sexes.rerun.tsv.bgz")
 	} else {
 		print("Error: dominance sumstat file not found")
 		break
