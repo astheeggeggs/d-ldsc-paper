@@ -97,6 +97,7 @@ for (pheno in phenos) {
 	}
 
 	if (biomarker) {
+		print("aha, a biomarker!")
 		dt_gwas_add <- fread(
 			cmd = paste0("zcat ", gwas_add_filepath),
 			select = c('variant', 'n_complete_samples', 'tstat'),
@@ -112,5 +113,7 @@ for (pheno in phenos) {
 		dt_out <- merge(dt_sites, merge(dt_gwas_add, dt_gwas_dom))
 		dt_out <- dt_out %>% select(SNP, A1, A2, Z_A, Z_D, N)
 		fwrite(dt_out, paste0(outfolder, pheno, ".imputed_v3.ldsc_add_dom_no_hm3_filter.both_sexes.tsv.gz"), sep='\t')
+	} else {
+		print("Not a biomarker!")
 	}
 }
