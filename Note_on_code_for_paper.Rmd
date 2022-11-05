@@ -1,0 +1,395 @@
+# The size of the large matrix table that includes corrections and the final number of phenotypes.
+
+gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt
+
+The full matrix table has 4,419 phenotypes and 13,791,467 variants. Of these, all have additive GWAS, and 4,377 have dominance GWAS. (Consisting of 4,315 non-biomarker and 4,377-4,315(!) biomarker phenotypes). This is consistent with the number of tsv.bgz files copied over to /stanley/genetics/datasets/ukbb-dominance/both_sexes. There are 3,441 male only tsv.bgz files, and 3,594 female only tsv.bgz files respectively.
+
+Removing phenotypes with less than 3,000 cases or controls (for binary phenotypes), and less than 50,000 non-missing entries (for continuous phenotypes), we have 1,341 phenotypes. This excludes the raw version of continuous phenotypes (only IRNT remain). When checking and matching exactly, we lose a small number of variants due to floating point inaccuracies - these don't make it into the final aggregate plot - there are 13,791,467 - 13,789,793 = 1,674 (0.012%) of them.
+
+# Also, want to check that these match Raymond's counts when carefully filtering down the phenotypes.
+# From Raymond's website, we have 11,685 GWAS in the additive run round 2 - 4,236 unique phenotype codes (3,011 PHESANT + 559 FinnGen + 633 ICD10 + 31 biomarkers + 2 covariates). 305 continuous phenotypes. Can I get to this number? I should be able to.
+
+# Excluding biomarker GWAS with the dilution factor covariate, raw versions of continuous phenotypes, and the redundant FinnGen codes, there are 10,466 total GWAS.
+
+				both_sexes	female 	male
+biomarkers 		31      	31 		31
+covariate 		2 			1 		1
+finngen 		501 		369 	356
+icd10 			633 		482 	439
+phesant 		2,891 		2,393 	2,305
+Total 			4,058 		3,276 	3,128
+
+# Raymond's final breakdown:
+
+				both_sexes	female 	male
+biomarkers 		31      	0 		0
+covariate 		2 			0 		0
+finngen 		486 		12 		3
+icd10 			553 		68 		12
+phesant 		2,839 		130 	42
+Total 			3,911 		210 	57
+
+# To test against this, I write out the cols() of gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt and investigate.
+
+```
+import hail as hl
+mt = hl.read_matrix_table('gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt')
+mt.cols().export('gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.phenotypes.tsv.bgz')
+```
+
+Now, let's check.
+
+# We have:
+559 Finngen - so this includes the redundant Finngen codes.
+633 ICD codes - this matches the ICD code numbers before Raymond's sex specific investigations and fixes.
+3,227 PHESANT - a different number - is the earlier PHESANT run accounting for this difference? Of these, 305 are continuous (again matching Raymond's numbers) - Note, Raymond's numbers are slightly off (probably my fault) the 305 continuous phenotypes includes the biomarkers - 31 of them.
+
+PHESANT
+Type
+Binary 				2,346 - 559 (the Finngen codes) - 633 (ICD codes)
+Categorical 		1,192
+Continuous (IRNT)	305 (including 31 biomarkers)
+Continuous (raw)	305 (including 31 biomarkers)
+Ordinal 			271
+Total 				3,227
+
+Subtract the duplicated continuous variables (274), and we have 2,953, subtract another (31*2; both sets of biomarkers) and we have 2,891 which is Raymonds first number. Good.
+
+We will also remove the sex specific and duplicated finngen codes etc that Raymond identified before running any analysis.
+We don't have the dilution, and need to remove the redundant Finngen codes (I removed a portion of them, but not all in my code - should just filter on Raymond's list). I have saved Raymond's redundant Finngen code definitions in `raymond_finngen_redundant_phenotypes.tsv`.
+
+Following Raymond's analyses, we remove a collection of sex-specific phenotypes from the primary analysis. I will check to make sure that the counts I have in the mt all line up with Raymond's analysis. I will then add in a new column annotation - primary analysis into the both_sexes (including biomarkers) matrix table. This will allow us to easily just add a single line in creating the various plots (an addition filter to add in this extra layer of QC).
+
+Everything matches up - details are in `generate_raymonds_primary_both_sex_phenotypes.r`. Following the filtering - after Raymond's QC there are 3,909 phenotypes. Following further filtering to phenotypes with sufficiently large counts, there are 1,288. Further, if we exclude ordinals, there are 1,060.
+
+To do this, I write the same table as before for males and females, and merge tables to generate the list.
+```
+import hail as hl
+mt_male = hl.read_matrix_table("gs://ukbb-dominance/additive_dominance_gwas_results.male_including_biomarkers_corrected_nov2020.mt")
+mt_female = hl.read_matrix_table("gs://ukbb-dominance/additive_dominance_gwas_results.female_including_biomarkers_corrected_nov2020.mt")
+mt_male.cols().export("gs://ukbb-dominance/additive_dominance_gwas_results.male_including_biomarkers_corrected_nov2020.phenotypes.tsv.bgz")
+mt_female.cols().export("gs://ukbb-dominance/additive_dominance_gwas_results.female_including_biomarkers_corrected_nov2020.phenotypes.tsv.bgz")
+```
+
+To do that, we create a list of phenotypes for inclusion before running the code to create all figures and run the LD-score analysis. I can also make use of the gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.phenotypes.tsv.bgz to convert between the observed and liability scales for the additive and dominance heritabilities for the case/control traits.
+
+This full matrix is what we will be using for the entirety of the dominance release. As part of my due diligence I will check again that all entries in the matrix table are present in 
+`gs://ukb-mega-gwas-results/round2/dominance-tsvs` and `gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs`. Those that aren't (if any), export them from the mt.
+Need to do this three times - for men, women, and both_sexes.
+
+# There are none that aren't in there for both-sexes - all of those that are missing from the tsv.bgz files are also missing from the mt. We will leave these missing - can include them later if we really need to, but they will be poorly powered binary phenotypes (due to an obscure bug that Caitlin found).
+
+# First, I determine the collection of phenotypes in the three most up to date matrix tables:
+gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt
+gs://ukbb-dominance/additive_dominance_gwas_results.male_including_biomarkers.mt
+gs://ukbb-dominance/additive_dominance_gwas_results.female_including_biomarkers.mt
+
+I found some things that needed to be fixed, see below for details and the new filenames for the males and females mts.
+
+I run:
+
+```
+import sys
+import hail as hl
+
+# From the mt files
+mt = hl.read_matrix_table('gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt')
+mt.cols().select('variable_type').export('gs://ukbb-dominance/phenotypes_analysed/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020_phenotypes.tsv')
+
+# Remove phenotypes that don't have sufficient data
+mt = mt.filter_cols((hl.is_defined(mt.n_cases) & (mt.n_cases > 3000) & (mt.n_controls > 3000)) | 
+                    (~hl.is_defined(mt.n_cases) & (mt.n_non_missing > 50000)))
+# Remove raw cts phenotypes
+mt = mt.filter_cols(~mt.phenotype.contains('raw'))
+mt.cols().select('variable_type').export('gs://ukbb-dominance/phenotypes_analysed/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020_phenotypes_3000_cat_50000_cts_analysed_in_paper.tsv')
+
+mt = hl.read_matrix_table('gs://ukbb-dominance/additive_dominance_gwas_results.male_including_biomarkers.mt')
+mt.cols().select('variable_type').export('gs://ukbb-dominance/phenotypes_analysed/additive_dominance_gwas_results.male_including_biomarkers_phenotypes.tsv')
+
+# Remove phenotypes that don't have sufficient data
+mt = mt.filter_cols((hl.is_defined(mt.n_cases) & (mt.n_cases > 3000) & (mt.n_controls > 3000)) | 
+                    (~hl.is_defined(mt.n_cases) & (mt.n_non_missing > 50000)))
+# Remove raw cts phenotypes
+mt = mt.filter_cols(~mt.phenotype.contains('raw'))
+mt.cols().select('variable_type').export('gs://ukbb-dominance/phenotypes_analysed/additive_dominance_gwas_results.male_including_biomarkers_phenotypes_3000_cat_50000_cts_analysed_in_paper.tsv')
+
+mt = hl.read_matrix_table('gs://ukbb-dominance/additive_dominance_gwas_results.female_including_biomarkers.mt')
+mt.cols().select('variable_type').export('gs://ukbb-dominance/phenotypes_analysed/additive_dominance_gwas_results.female_including_biomarkers_phenotypes.tsv')
+
+# Remove phenotypes that don't have sufficient data
+mt = mt.filter_cols((hl.is_defined(mt.n_cases) & (mt.n_cases > 3000) & (mt.n_controls > 3000)) | 
+                    (~hl.is_defined(mt.n_cases) & (mt.n_non_missing > 50000)))
+# Remove raw cts phenotypes
+mt = mt.filter_cols(~mt.phenotype.contains('raw'))
+mt.cols().select('variable_type').export('gs://ukbb-dominance/phenotypes_analysed/additive_dominance_gwas_results.female_including_biomarkers_phenotypes_3000_cat_50000_cts_analysed_in_paper.tsv')
+```
+
+# To check consistency of mt and tsv.bgz files for `both_sexes` I used `sanity_check_compare_tsv_and_mt.r` and `obtain_dominance_phenotype_list_from_gwas_results.py`.
+# I have now moved the phenotypes that are not present in the matrix table to `gs://ukb-mega-gwas-results/round2/dominance-tsvs/problematic-dominance-tsvs`. There are 300 such phenotypes - primarily ICD10 codes with low case count.
+# There are around 600 each for male and female GWAS - again, these are primarily ICD10 codes with low case count (we altered the threshold, so they were removed later in our original QC pipeline). These have also been moved to `gs://ukb-mega-gwas-results/round2/dominance-tsvs/problematic-dominance-tsvs`. Moving of these files is in `sanity_check_compare_tsv_and_mt.r`.
+
+# In performing this check (obtain_dominance_phenotype_list_from_gwas_results.py), I found that the indexing problem (which skipped the final iteration of a loop) that lead to a collection of ICD codes being excluded from `additive_dominance_gwas_results.both_sexes_including_biomarkers.mt` was also present in the male and female versions of large mts. I have added code to `add_final_pipeline_back_in.py` to incorporate these phenotypes in to the mts in the same manner as for `additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt`. These new mts are named:
+
+gs://ukbb-dominance/additive_dominance_gwas_results.female_including_biomarkers_corrected_nov2020.mt
+gs://ukbb-dominance/additive_dominance_gwas_results.male_including_biomarkers_corrected_nov2020.mt
+
+# After creating these mts I reran the `obtain_dominance_phenotype_list_from_gwas_results.py` code to make sure that these phenotypes had been incorporated. The only phenotypes not present in the large mts are:
+
+both_sexes: 20002_1240, 20002_1437, 20002_1501, 20002_1509, 20002_1525, 20002_1585, 20002_1605, 20002_1620, 20002_1661, 20003_1140862526, 20003_1140862770, 20003_1140864070, 20003_1140865000, 20003_1140865394, 20003_1140866466, 20003_1140866804, 20003_1140868064, 20003_1140870488, 20003_1140873450, 20003_1140877826, 20003_1140878172, 20003_1140879762, 20003_1140880956, 20003_1140882272, 20003_1140913292, 20003_1140922714, 20003_1141145630, 20003_1141150750, 20003_1141153242, 20003_1141157418, 20003_1141171038, 20003_1141172492, 20003_1141172698, 20003_1141179764, 20003_1141180150, 20003_1141180662, 20003_1141187230, 20003_1141188594, 20003_1141195224, 20003_1141200768, 20003_2038460068, 6141_5.
+
+male: 20002_1134, 20002_1163, 20002_1438, 20002_1504, 20002_1548, 20002_1623, 20002_1635, 20003_1140861166, 20003_1140862944, 20003_1140865016, 20003_1140865670, 20003_1140867444, 20003_1140867504, 20003_1140871688, 20003_1140884308, 20003_1140916980, 20003_1140927730, 20003_1141153032, 20003_1141167334, 20003_1141168554, 20003_1141168590, 20003_1141168684, 20003_1141171336, 20003_1141189094, 20003_1141191748, 20003_1141192248, 41248_6007.
+female: 20002_156, 20002_163, 20002_165, 20002_165, 20003_114086937, 20003_114087347, 20003_114087830, 20003_114088470, 20003_114090987, 20003_114091083, 20003_114115259, 20003_114117667, "20003_114117991. 
+
+These are phenotypes that are at the boundary of inclusion and changed due the bug that Caitlin found.
+
+I also ran md5sums on the cloud and cluster versions of the additive tsv files that we are using. Note that these are not the most up to date ones that Dan modified slightly.
+The files compared are those at 
+cloud: gs://ukb-mega-gwas-results/round2/additive-tsvs/*tsv.bgz
+cluster: /stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/{male,female,both_sexes}/{biomarkers}/*tsv.bgz
+I run `additive_md5sum_cloud.sh` and `additive_md5sum_cluster.sh` followed by `md5sum_additive_check.r` to munge and compare them. They are the same! Great.
+
+So we can now be confident that the tsv.bgz files on the cluster and in the cloud are the same. Further, given that the numbers of files matches the numbers of phenotypes with data in the respective matrix tables, these should all nicely match. Great. Took me long enough, but worthwhile.
+
+Figure 2. This requires all of the dominance summary statistics data. The most up to date and cleaned of this is:
+gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt
+- note that this is what was used to generate the aggregrate manhattan plot - Figure 2 in the paper.
+
+The mt is filtered using `create_aggregate_manhattan_plot.py` - we annotate with the most extreme additive and dominance t-statistic, and find the corresponding phenotype.
+- note, currently ordinal variables are included here...I think they should possibly be removed.
+
+I have now added code to the create_aggregate_manhattan_plot.py script to generate an aggregate file that excludes the ordinal variables (labelled 'ordinal' in variable type in the matrix-table col annotation),  and saved the file at `gs://ukbb-dominance/aggregate_manhattan_no_ord.tsv.bgz`. I've also saved a version that includes only MAF > 0.05 variants as I ran out of RAM on my laptop and could not install the required library to create plots on the cluster (ggrastr).
+
+I have now also included further code to remove all but the phenotypes in our list - to do this, we copy over the tsv file containing the boolean columns, and filter to the collection of phenotypes in the final column `dominance_qc_no_ordinal`.
+This is the file: `additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.phenotypes_and_boolean_filters.tsv`.
+
+To get these two Manhattan plots, we just grab the largest t-statistic for each SNP, running along the genome using:
+`create_aggregate_manhattan_plot.py`. 
+No filters are applied at this stage.
+When making the manhattan plots for figure 2 using `lightweight_manhattan.r` a 0.05 MAF filter is applied to both using the `make_ukbb_summary_manhattan_plot` function in `ldscgxe/plotting/lightweight_manhattan.r`.
+
+create_aggregate_manhattan_plot.r creates all the Manhattan plots that are the combined and cleaned up for Figure 2. These are then saved in figure_2/figure_2.svg.
+
+I've created aggregate manhattan plots excluding the ordinal variables. These saved are currently saved on my laptop, but will be included in the main text. I will shift the version including the ordinal variables to the supplement.
+# Main text portion is done.
+# TODO: Add the ordinal variable version to the supplement - Nah, don't bother.
+
+# The number of dominance loci within this large collection of summary statistics files
+- There is the number that Wei estimated, using cytobands, the number that I estimated using cytobands, and the number estimated by the finemapping.
+
+# The number of phenotypes for which we have heritability estimates - Does this match up?
+# Yep, it matches.
+# Currently all case-control heritability estimates are on the observed scale. We should translate and save them on the liability scale too.
+# This is done.
+
+# Go through each phenotype and find the top 5 hits for that phenotype - additive and dominance, and save the results:
+To do this, we keep the biggest hit in each cytoband, and retain each of those in `gs://ukbb-dominance/group_by_cytoband/additive_dominance_gwas_results.both_sexes_hits_by_cytoband.mt`. We then just keep the top 5 of each of these, for additive and dominance hits separately. This needs to be rerun as it includes the errors introduced prior to creation of gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt. The mt is created using get_top_dominance_and_additive_loci_for_all_phenotypes.py the result is stored at:
+gs://ukbb-dominance/additive.dominance.gwas.imputed_v3.both_sexes_top_hits_no_X.tsv.bgz
+I have now added lines to get_top_dominance_and_additive_loci_for_all_phenotypes.py so that the updated mt is read in. We save the new mt and tsv.bgz at:
+gs://ukbb-dominance/group_by_cytoband/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020_hits_by_cytoband.mt' and gs://ukbb-dominance/additive.dominance.gwas.imputed_v3.both_sexes_including_biomarkers_corrected_jan2020_top_hits_no_X.tsv.bgz respectively.
+# This is now done.
+
+This leads to Figure 3 - the variance explained by the top loci.
+The plot is created using `plot_variance_explained_by_top_loci.r`. 
+Note that this plot also includes the ordinal variables at the moment - consistent with Figure 2.
+# However, this is based on `gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes.mt` - so not the most up to date version - it does not include biomarkers and the correction. Needs updating.
+# This is now done. The up to date version of Figure 3 before using inkscape to clean things up is at `heritability_paper_figures_and_tables/hist_of_V_A_V_D_new.pdf`.
+# This has been updated further in `plot_variance_explained_by_top_loci_facet.r`. The resultant plot is the cleaned up in inkscape for inclusion into the paper.
+# The figure for the paper is figure_3/figure_3.svg.
+
+# To determine the collection of phenotypes to take through to fine-mapping, we use `filter_to_well_powered_phenotypes_with_dom_hit.py`. This starts with the most up to data both_sexes mt - so don't need to rerun finemapping! Good.
+
+```
+import sys
+import hail as hl
+
+mt = hl.read_matrix_table("gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_biomarkers_corrected_jan2020.mt")
+
+mt = mt.filter_cols((hl.is_missing(mt.n_cases) & (mt.n_non_missing > 50000)) | (~hl.is_missing(mt.n_cases) & ((mt.n_cases > 3000) & (mt.n_controls > 3000))))
+mt = mt.filter_rows((mt.p_hwe > 1e-6) & (mt.minor_AF > 0.05) & (mt.locus.in_autosome()))
+
+mt = mt.annotate_cols(n_dominance_hits = hl.agg.count_where(mt.dominance.pval < 5e-8))
+mt = mt.annotate_cols(has_dominance_hit = mt.n_dominance_hits > 0)
+
+mt = mt.filter_cols(mt.has_dominance_hit == True).cols()
+
+mt.key_by().select('phenotype', 'description', 'variable_type', 'source').export("gs://ukbb-dominance/phenotypes_with_significant_dominance_hit.tsv.bgz")
+
+ht = hl.import_table("gs://ukbb-dominance/phenotypes_with_significant_dominance_hit.tsv.bgz")
+
+# Remove the continuous raw phenotypes.
+ht = ht.filter(ht.variable_type == 'continuous_raw', keep=False)
+ht.export("gs://ukbb-dominance/phenotypes_with_significant_dominance_hit_no_cts_raw.tsv.bgz")
+```
+
+(This is present at the end of one of the untitled ipython notebooks on the cloud). It grabs the phenotypes as before (1,341) filters out variants out of HWE (p<1e-6) and rare (<0.05), and then determines how many phenotypes have a dominance hit following this restriction - there are 353. This excludes continuous raw, but includes ordinal variables.
+
+This list should also be sent to Wei to check - if we have other phenotypes in the list, we should remove them from our locuszoom plots.
+
+# Having checked through e-mails with Sam I have located a trove of dominance work - it lives at `/stanley/genetics_storage/analysis/ukbb_dominance` and was moved from `/psych/genetics_data/dpalmer/UKbb`. So if we find some scripts that require rerunning which point to this directory, we should be able to switch it out for the new one.
+
+Note that this includes all the data for the LDSC heritability work and the fine-mapping.
+
+# The location of the 'additive sumstats' that we've been using for the dominance work is `/stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export`. These were moved from `/psych/genetics_data/dpalmer/UKbb/sumstats-additive-export`. So again, if we see any scripts pointing to that location, we should be able to update to the new location. The additive biomarker results are at `/stanley/genetics/analysis/ukbb_sumstats/sumstats-additive-export/{both_sexes,males,females}/biomarkers/`. As stated above, I have now checked that these match up between the cluster and the cloud.
+
+# Next, look at the heritability results.
+# Checking the files that I have saved on my laptop. Looking at the intersection of the files with those that pass Raymond's criteria, we have just the biomarkers left, but I have evaluated the h2 for those too, so remains to combine them, and check that they match the latest version on the cluster. The cluster version lives here:
+"../../results/UKbb/ldsc-dominance-export/h2-dominance-results` I think.
+
+# There are two files that are pulled from to create the histograms and plots for the heritability figure - additive.h2 and dominance.h2.
+
+# Following Raymond's cleaning and filtering, the only phenotypes that are missing for the additive are the biomarkers:
+# 30600_irnt, 30610_irnt, 30620_irnt, 30630_irnt, 30640_irnt,
+# 30650_irnt, 30660_irnt, 30670_irnt, 30680_irnt, 30690_irnt,
+# 30700_irnt, 30710_irnt, 30720_irnt, 30730_irnt, 30740_irnt,
+# 30750_irnt, 30760_irnt, 30770_irnt, 30780_irnt, 30790_irnt,
+# 30800_irnt, 30810_irnt, 30820_irnt, 30830_irnt, 30840_irnt,
+# 30850_irnt, 30860_irnt, 30870_irnt, 30880_irnt, 30890_irnt,
+# 30897_irnt.
+
+This means that there are a total of 3,878 additive h2 results.
+
+# and the collection of phenotypes that are missing for dominance are the biomarkers and:
+
+20002_1240, 20002_1437, 20002_1501, 20002_1509, 20002_1525, 20002_1585, 20002_1605, 20002_1620, 20002_1661, 20003_1140862526, 20003_1140862770, 20003_1140864070, 20003_1140865000, 20003_1140865394, 20003_1140866466, 20003_1140866804, 20003_1140868064, 20003_1140870488, 20003_1140873450, 20003_1140877826, 20003_1140878172, 20003_1140879762, 20003_1140880956, 20003_1140882272, 20003_1140913292, 20003_1140922714, 20003_1141145630, 20003_1141150750, 20003_1141153242, 20003_1141157418, 20003_1141171038, 20003_1141172492, 20003_1141172698, 20003_1141179764, 20003_1141180150, 20003_1141180662, 20003_1141187230, 20003_1141188594, 20003_1141195224, 20003_1141200768, 20003_2038460068, 6141_5.
+
+# This means that there are a total of 3,836 dominance h2 results. 
+
+# Note that these are precisely the phenotypes that were missing due to the small bug that Caitlin found, so will only affect phenotypes with low case/control counts.
+
+# Following the extra filter, to just those phenotypes with reasonable case/control n_non_missing counts, the number of additive and dominance results are the same:
+
+We have 1,258 before removing the ordinal variables, and 1,030 after removing ordinal variables.
+
+Let's see if we can get the biomarker h2 results in there too.
+
+# Looking at scripts on my laptop, I have a collection of scripts to evaluate h2 additive and dominance, and to combine them. These are all in this folder: `ldscgxe/submission_scripts_uger`. The important scripts are:
+`submit_all_additive_h2.sh`
+`submit_all_dominacne_h2.sh`
+`combine_dominance_h2_results.sh`
+`combine_additive_h2_results.sh`
+
+Remember, the location of these dataset is now at:
+/stanley/genetics/datasets/ukbb-dominance/{both_sexes,males,females}
+The output that is used to create dominance.h2 on my laptop is taken from:
+/stanley/genetics_storage/analysis/ukbb_dominance/ldsc-dominance-export/dominance.h2
+This is a combination of the results in:
+/stanley/genetics_storage/analysis/ukbb_dominance/ldsc-dominance-export/h2-dominance-results/
+Looking at the log files in here, the LD-scores used to generate these heritabilities are:
+../../results/UKbb/ldscores_ldscgxe/1000G_EUR_Phase3_hm3_chr@
+(see e.g. less /stanley/genetics_storage/analysis/ukbb_dominance/ldsc-dominance-export/h2-dominance-results/100001_irnt.log)
+These can now be found in:
+/stanley/genetics_storage/analysis/ukbb_dominance/ldscores_ldscgxe/
+based on the log files for these files, these use the following flags:
+```
+./get_ldscores.py \
+--out 1000G_EUR_Phase3_plink/ldscores/1000G_EUR_Phase3_hm3_chr1 \
+--bfile 1000G_EUR_Phase3_plink/1000G.EUR.QC.1 \
+--extract 1000G_EUR_Phase3_plink/w_hm3.snplist \
+--additive  \
+--dominance  \
+--ld-wind-cm 1.0
+```
+
+
+We have separate scripts to run and combine the biomarker h2 estimates. These are in 
+`ldscgxe/ukbb_biomarkers`
+The important scripts are:
+`run_h2_biomarkers.sh`
+`combine_h2_results.r`
+and the resultant combined file is saved locally at `ldscgxe/ukbb_biomarkers/biomarkers_combined.h2.tsv`.
+
+I have now added these h2 results to the R functions used to generate histograms and create the heritability figure as well as the heritability tables.
+
+Including these h2 results too, we have 3,867 with both additive and dominance h2 (which is 3,867 + 31). Filtering down to those with sufficient sample size, we have 1,288 - so all of them are there. Good.
+
+# Looks like I have already created a simple function to convert h2 to the liability scale and save the result. I just need to add in the biomarkers, and rerun it. We can then filter down to the collection of phenotypes that have reasonable sample size and pass Raymonds filters. Also, need to double check that the SEs are evaluated in that code.
+
+# That's now done (for the histogram plot too), and I've saved the h2 summary file in the same folder as this README: `h2_paper_table.tsv`. This also updates the h2_results_D.tex and h2_results_A.tex. The code to create this complete table is at `figure_5/1_create_heribility_tables_and_histogram.r`.
+
+# I've now also updated `2_plot_heritability_results.r`. Pre-filtered phenotypes are the collection of phenotypes in both sexes curated by Raymond, after are those phenotypes with the additional inclusion of 50,000 non-missing filter and 3,000 case/control filter for continuous and case/control phenotypes respectively. Further, we remove all ordinal variables.
+
+# Combining and cleaning up all the subplots of Figure 4 - now Figure 5 (heritability plot) is at `figure_5/figure_5.svg`,
+# `figure_5/heritability_results_summaries/paper_filter_figure.svg` contains the updated version of supplementary figure 11 (before and after the 50,000, 3,000 case/control and ordinal removal filters).
+
+# I then checked the p-values associated to the finemapping results. To do this, I filtered the huge mt down to the collection of phenotypes and variants present in the finemapping results (see `sanity_check_compare_finemapping_and_mt.r`):
+
+```
+MAF_locus <- 0.05
+MAF_finemap <- 0
+pHWE_finemap <- "1e-10"
+out_location <- "~/Repositories/ldscgxe/dominance_fine_mapping/"
+
+dt <- fread(paste0("gzcat ", out_location, "fine_mapped_variants_annotations_maf_", MAF_locus, "_p_hwe_", pHWE_finemap, "_maf_finemap_", MAF_finemap, ".tsv.gz"))
+dt <- dt %>% filter(maf > 0.01) %>% mutate(exonic = ifelse(Func.refGene == "exonic", "Coding", "Non-coding"))
+dt <- dt %>% arrange(desc(exonic))
+``
+
+Filtering and export of the full both_sexes mt to a tsv.bgz file is done in `sanity_check_compare_finemapping_and_mt.py`. Comparison of p-values, looping over phenotypes and variants is performed in `sanity_check_compare_finemapping_and_mt.r`. They are the same. Excellent.
+
+The existing Figure 5 did not filter the phenotypes down to our list of 1,060 - I have now done this and updated the figure.
+
+Figure 5 in the paper is generated in `create_combined_dominance_finemapping_tables_from_results.r`. I've added lines (starting at 119) to filter down to curated phenotypes before plotting. It's saved at `heritability_paper_figures_and_tables/paper_figure_5.pdf`.
+
+I also generate the count of points above y=x.
+
+# Table S7 is also generated in `create_combined_dominance_finemapping_tables_from_results.r`. I've altered the code slightly to send "0" to < -308 to avoid -Inf log(p) values in the table.
+
+# I then checked the locuszoom plots in the supplement. To do this I generated tables in the same manner as `sanity_check_compare_finemapping_and_mt.py` using `sanity_check_compare_locuszoom_and_mt.py` and `sanity_check_compare_locuszoom_and_mt.r` - I then check that the numbers in the table correspond to the heights in the plot. They do! All good. Only thing to think about is that skin colour is ordinal so would have been removed - need a reason to incorporate it again if we want to include it in the paper.
+
+# I've added a python script to convert PMIDs to a .bib file, which we can then include in the supplement .bib file.
+
+# TODO - check whether this has changed the table in the supplement - there could be some biomarkers that have been added.
+
+# TODO - Rerun the HWE etc checks on the new aggregate file? I should really do this.
+
+# Updating to rerun the biomarkers through everything means I need to rerun lots of code!
+# First I created new biomarker matrix tables and added the new biomarker sumstats to the full results matrix table
+# and saved it as 
+# To do this I ran biomarkers_rerun/load_results_matrix_table_biomarkers_dominance.py to create the biomarker mt and then
+# ran biomarkers_rerun/correct_biomarkers_in_mt.py to update the final mt to:
+# gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_nov2022_biomarkers_corrected_jan2020.mt
+# 1. Run filter_to_well_powered_phenotypes_with_dom_hit.py (ldscgxe/finding_loci_for_locuszoom/filter_to_well_powered_phenotypes_with_dom_hit.py)
+# Updating the file to read in:
+# gs://ukbb-dominance/additive_dominance_gwas_results.both_sexes_including_nov2022_biomarkers_corrected_jan2020.mt
+# Also, we now also output all the phenotypes with a hit with MAF 0.01, pHWE 1e-10 cutoff too.
+# This now creates two files:
+# gs://ukbb-dominance/phenotypes_with_significant_dominance_hit_no_cts_raw_0.05_pHWE_1e-6.tsv.bgz
+# gs://ukbb-dominance/phenotypes_with_significant_dominance_hit_no_cts_raw_0.01_pHWE_1e-10.tsv.bgz, and
+# (the second is the same as the old one, but with fixed biomarkers, the first is a new more lenient cutoff to check robustness).
+
+# These files are then passed to the finemapping pipeline, after filtering to the subset of 1,060 traits.
+# (There won't actually be too many to finemap) - we'll just stick with the more stringent cutoff (to define the set of traits to look at).
+
+# To do this, I follow the README.md in ldscgxe/dominance_fine_mapping/README.md. For the steps in the README, I alter
+# the code to refer to the phenotypes specified above, and this time filter down to the 1,060 curated phenotypes
+# rather than running all of them through and then subsetting.
+
+# I've run create_incl_files_hail_input_biomarkers_rerun.r to create the new incl files (for fixed biomarkers)
+# I've update gcloud on the Broad cluster so that I could run this.
+# Run get_variances_for_dominance_hit_phenotypes_hail.py, do create gs://ukbb-dominance/variance_of_phenotypes_with_dominance_hit_0.01_pHWE_1e-10.csv
+# This will then be read in on the fly in create_json_files.r to create the .json files when we 
+# run submit_all_make_finemap_inputs_hail_input.r.
+# Before running run_submit_biomarker_finemap_inputs_hail_input.r I need to move the GWAS files to the broad cluster!
+# gsutil cp gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs/*both_sexes*rerun* /psych/genetics_data/dpalmer/UKbb/sumstats-dominance-export/biomarkers_rerun/both_sexes/
+# I'll then run aggregating_lead_SNPs_from_z_files.r to update the biomarkers using the initial criteria for 'hits'
+# this new file is written to /psych/genetics_data/dpalmer/UKbb/dominance_fine_mapping_biomarkers_rerun//lead_dominance_variant_maf_0.05_p_hwe_1e-06_maf_finemap_0.01.tsv.
+# I thought there was a problem, but the HLA is excluded, and we see a lot of dominance hits there.
+# The 175 number comes from allDomLoci_withtopHit.txt.
+# Have asked Wei to rerun her code to create two new versions (MAF > 0.05 and pHWE > 1e-6, and MAF > 0.01 and pHWE > 1e-10).
+
+# I've created LD-scores using EUR 1000G down to MAF 0.01 (script in ldscgxe/1000G_EUR_Phase3_plink/get_1000G_maf_0.01_ldscores.sh).
+# Need to apply these to the dominance summary statistics on the Broad cluster (use no MAF cutoff LD-scores too), to check robustness.
+# (I called this "Analysis 2" in the 'dominance left to do document').
+# Moved these LD-scores and log files to scp * dpalmer@login01:/stanley/genetics_storage/analysis/ukbb_dominance/ldscores_ldscgxe/ldscores_maf_0.01_nov_2022/*
+# To submit these, I run
+# sumstats_folder="/stanley/genetics_storage/analysis/ukbb_dominance/ldsc-dominance-export/sumstats-files-1"
+# etc
+# path_to_output="/psych/genetics_data/dpalmer/h2-maf-0.01/"
+# bash submit_all_dominance_h2_maf_0.01.sh $sumstats_folder $path_to_output
+# Wait! Turns out that the ldsc exported files are restricted to a subset of SNPs. Presumably these are the 
+# well behaved SNPs (HM3 etc).
+
+# This means I need to reoutput the ldsc file for all of the traits that we want to run.
+# Note the descrepancy in the collection of SNPs output in the ldsc files is that variants are 
+# currently retained in the dominance set that are in the HLA region - this won't matter though
+# as these SNPs don't have LD-scores in the set used for analysis. Phew.
