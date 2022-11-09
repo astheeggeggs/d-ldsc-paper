@@ -5,7 +5,7 @@
 #$ -w e
 #$ -j y
 #$ -b n
-#$ -l h_vmem=4g
+#$ -l h_vmem=8g
 
 source /broad/software/scripts/useuse
 use GCC-5.2

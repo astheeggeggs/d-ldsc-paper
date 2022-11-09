@@ -20,6 +20,6 @@ dt_gs_filtered <- merge(phenos, dt_gs)
 
 # Then, loop over each of them, submitting the job to the cluster
 
-for (gs_file in dt_gs_filtered$gs_folder) {
+for (gs_file in dt_gs_filtered$gs_folder[900:length(dt_gs_filtered$gs_folder)]) {
 	system(paste0("qsub -v gs_file=", gs_file, " move_dom_sumstats_from_cluster_template.sh"))
 }
