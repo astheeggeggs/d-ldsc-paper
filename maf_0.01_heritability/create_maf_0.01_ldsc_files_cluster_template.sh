@@ -8,13 +8,6 @@
 #$ -l h_vmem=8g
 
 source /broad/software/scripts/useuse
-# use GCC-5.2
-# use GSL
-# use UGER
-# use Anaconda
-# reuse -q PLINK
-# reuse -q .zlib-1.2.8
-# reuse -q PSEQ
 use R-3.5
 export PATH="/home/unix/dpalmer/google-cloud-sdk/bin/:$PATH"
 

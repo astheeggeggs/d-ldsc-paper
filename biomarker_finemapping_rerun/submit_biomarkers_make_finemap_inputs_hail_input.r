@@ -5,6 +5,10 @@ maf_locus <- 0.05
 maf_finemap <- 0.01
 p_hwe_finemap <- 1e-6
 
+maf_locus <- 0.05
+maf_finemap <- 0
+p_hwe_finemap <- 1e-10
+
 # Go through each of the the different classes of phenotype, loop over them including the required phenotype and summary stat information
 
 # First, check to ensure that all of the phenotype files on the cluster are the same as those on the cloud.

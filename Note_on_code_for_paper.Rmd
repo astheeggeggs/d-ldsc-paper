@@ -290,7 +290,6 @@ based on the log files for these files, these use the following flags:
 --ld-wind-cm 1.0
 ```
 
-
 We have separate scripts to run and combine the biomarker h2 estimates. These are in 
 `ldscgxe/ukbb_biomarkers`
 The important scripts are:
@@ -328,7 +327,7 @@ Filtering and export of the full both_sexes mt to a tsv.bgz file is done in `san
 
 The existing Figure 5 did not filter the phenotypes down to our list of 1,060 - I have now done this and updated the figure.
 
-Figure 5 in the paper is generated in `create_combined_dominance_finemapping_tables_from_results.r`. I've added lines (starting at 119) to filter down to curated phenotypes before plotting. It's saved at `heritability_paper_figures_and_tables/paper_figure_5.pdf`.
+Figure 5 (now Figure 4) in the paper is generated in `create_combined_dominance_finemapping_tables_from_results.r`. I've added lines (starting at 119) to filter down to curated phenotypes before plotting. It's saved at `heritability_paper_figures_and_tables/paper_figure_5.pdf`.
 
 I also generate the count of points above y=x.
 
@@ -366,10 +365,11 @@ I also generate the count of points above y=x.
 
 # I've run create_incl_files_hail_input_biomarkers_rerun.r to create the new incl files (for fixed biomarkers)
 # I've update gcloud on the Broad cluster so that I could run this.
-# Run get_variances_for_dominance_hit_phenotypes_hail.py, do create gs://ukbb-dominance/variance_of_phenotypes_with_dominance_hit_0.01_pHWE_1e-10.csv
+# Run get_variances_for_dominance_hit_phenotypes_hail.py, to create gs://ukbb-dominance/variance_of_phenotypes_with_dominance_hit_0.01_pHWE_1e-10.csv
 # This will then be read in on the fly in create_json_files.r to create the .json files when we 
 # run submit_all_make_finemap_inputs_hail_input.r.
-# Before running run_submit_biomarker_finemap_inputs_hail_input.r I need to move the GWAS files to the broad cluster!
+# Before running run_submit_biomarker_finemap_inputs_hail_input.r I need to move the GWAS files to the broad cluster! I run this script using both MAF=0.05, pHWE=1e-6, MAF_finemap=0.01, and MAF=0.05, pHWE=1e-10, MAF_finemap=0.
+
 # gsutil cp gs://ukb-mega-gwas-results/round2/dominance-biomarkers-tsvs/*both_sexes*rerun* /psych/genetics_data/dpalmer/UKbb/sumstats-dominance-export/biomarkers_rerun/both_sexes/
 # I'll then run aggregating_lead_SNPs_from_z_files.r to update the biomarkers using the initial criteria for 'hits'
 # this new file is written to /psych/genetics_data/dpalmer/UKbb/dominance_fine_mapping_biomarkers_rerun//lead_dominance_variant_maf_0.05_p_hwe_1e-06_maf_finemap_0.01.tsv.
@@ -393,3 +393,18 @@ I also generate the count of points above y=x.
 # Note the descrepancy in the collection of SNPs output in the ldsc files is that variants are 
 # currently retained in the dominance set that are in the HLA region - this won't matter though
 # as these SNPs don't have LD-scores in the set used for analysis. Phew.
+# This is now done.
+# I also created new ldsc sumstat files for the original dominance LD-score regression for the fixed biomarkers
+# All the code to create these are in ldscgxe_dominance_paper/biomarkers_rerun and ldscgxe_dominance_paper/maf_0.01_heritability.
+
+# I need to add in these fixed h2 estimates for the biomarkers in to Figure 5.
+# This is now done.
+
+# Following the creation of the z files and submission scripts using "submit_biomarkers_make_finemap_inputs_hail_input.r" I then run submit_all_dominance_ldstore_jobs_biomarkers.sh
+# I also need to run the additive version of these too (because the region to be finemapped may have changed after the fix).
+# I then run submit_all_susie_jobs_biomarkers.sh for additive and dominance hits among the biomarkers.
+
+# Have now exported pHWE values from the matrix table for filtering:
+# gs://ukbb-dominance/pHWE_taken_from_mt_nov2022.tsv.bgz
+
+
